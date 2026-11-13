@@ -1,5 +1,11 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 
+import type { AgentNames } from '../../../../core/src/agentNames.js';
+import {
+  agentIdentity,
+  agentLabel,
+  MAX_AGENT_NAME_LENGTH,
+} from '../../../../core/src/agentNames.js';
 import { Button } from '../../components/ui/Button.js';
 import { PixelIcon } from '../../components/ui/PixelIcon.js';
 import {
@@ -45,7 +51,14 @@ interface ToolOverlayProps {
   panRef: React.RefObject<{ x: number; y: number }>;
   onCloseAgent: (id: number) => void;
   alwaysShowOverlay: boolean;
+  /** The user's own names for agents, by identity. */
+  agentNames: AgentNames;
+  /** Name an agent (empty clears the name). */
+  onSaveAgentName: (identity: string, name: string) => void;
 }
+
+/** The label a lead wears when the user has not named it. */
+const LEAD_LABEL = 'LEAD';
 
 /** Derive a short human-readable activity string from tools/status */
 function getActivityText(
@@ -111,7 +124,14 @@ export function ToolOverlay({
   panRef,
   onCloseAgent,
   alwaysShowOverlay,
+  agentNames,
+  onSaveAgentName,
 }: ToolOverlayProps) {
+  // Which agent's name is being edited, and the text so far. One at a time:
+  // the field only exists on the selected character's label.
+  const [editing, setEditing] = useState<{ id: number; identity: string; value: string } | null>(
+    null,
+  );
   const [, setTick] = useState(0);
   useEffect(() => {
     let rafId = 0;
@@ -279,7 +299,12 @@ export function ToolOverlay({
         }
 
         // Team info
-        const teamRoleLabel = ch.isTeamLead ? 'LEAD' : ch.agentName || null;
+        // The user's own name wins over the CLI's; core/agentNames owns the
+        // precedence so every reader agrees.
+        const identity = agentIdentity(ch);
+        const teamRoleLabel = agentLabel(agentNames, ch, LEAD_LABEL);
+        const isNamed = !!(identity && agentNames[identity]);
+        const isEditing = editing?.id === id;
 
         // Context gauge. Every agent gets one — lead, teammate, adopted,
         // headless — as soon as the server reports its context (a cleared
@@ -315,17 +340,48 @@ export function ToolOverlay({
                   />
                 )}
                 <div className="flex flex-col gap-0 overflow-hidden">
-                  {teamRoleLabel && (
-                    <span
-                      className="overflow-hidden text-ellipsis block leading-none"
-                      style={{
-                        fontSize: '18px',
-                        color: ch.isTeamLead ? TEAM_LEAD_COLOR : TEAM_ROLE_COLOR,
-                        fontWeight: ch.isTeamLead ? 'bold' : undefined,
+                  {isEditing ? (
+                    <input
+                      autoFocus
+                      value={editing.value}
+                      maxLength={MAX_AGENT_NAME_LENGTH}
+                      placeholder={teamRoleLabel ?? 'Name'}
+                      aria-label="Agent name"
+                      data-testid="agent-name-input"
+                      className="bg-transparent border-0 outline-none leading-none w-28"
+                      style={{ fontSize: '18px', color: TEAM_LEAD_COLOR }}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => setEditing({ ...editing, value: e.target.value })}
+                      onKeyDown={(e) => {
+                        e.stopPropagation();
+                        if (e.key === 'Enter') {
+                          onSaveAgentName(editing.identity, editing.value);
+                          setEditing(null);
+                        } else if (e.key === 'Escape') {
+                          setEditing(null);
+                        }
                       }}
-                    >
-                      {teamRoleLabel}
-                    </span>
+                      // Committing on blur as well, so clicking away keeps the
+                      // name instead of quietly dropping what was typed.
+                      onBlur={() => {
+                        onSaveAgentName(editing.identity, editing.value);
+                        setEditing(null);
+                      }}
+                    />
+                  ) : (
+                    teamRoleLabel && (
+                      <span
+                        className="overflow-hidden text-ellipsis block leading-none"
+                        data-testid="agent-role-label"
+                        style={{
+                          fontSize: '18px',
+                          color: ch.isTeamLead || isNamed ? TEAM_LEAD_COLOR : TEAM_ROLE_COLOR,
+                          fontWeight: ch.isTeamLead || isNamed ? 'bold' : undefined,
+                        }}
+                      >
+                        {teamRoleLabel}
+                      </span>
+                    )
                   )}
                   <span
                     className="overflow-hidden text-ellipsis block leading-none"
@@ -342,6 +398,20 @@ export function ToolOverlay({
                     </span>
                   )}
                 </div>
+                {isSelected && !isSub && identity && !isEditing && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditing({ id, identity, value: agentNames[identity] ?? '' });
+                    }}
+                    title={isNamed ? 'Rename this agent' : 'Name this agent'}
+                    className="ml-2 shrink-0"
+                  >
+                    <PixelIcon name="pencil" className="translate-y-3" />
+                  </Button>
+                )}
                 {isSelected && !isSub && (
                   <Button
                     variant="ghost"

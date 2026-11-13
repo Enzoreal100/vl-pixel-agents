@@ -200,6 +200,15 @@ export const LAYOUT_FILE_NAME = 'layout.json';
 export const JSON_FILE_POLL_INTERVAL_MS = 2000;
 export const LAYOUT_REVISION_KEY = 'layoutRevision';
 export const CONFIG_FILE_NAME = 'config.json';
+/** The user's own names for agents. Its own file, not a key of config.json,
+ *  because it is the one piece of state worth carrying to another machine:
+ *  kept apart, it can be version-controlled on its own. */
+export const AGENT_NAMES_FILE_NAME = 'agent-names.json';
+/** Points the names file somewhere else — a synced folder, a git repo — so a
+ *  reinstalled or borrowed machine opens the office with the same names.
+ *  A directory path takes AGENT_NAMES_FILE_NAME inside it; a path ending in
+ *  .json IS the file. Unset = the usual spot under ~/.pixel-agents. */
+export const AGENT_NAMES_PATH_ENV = 'PIXEL_AGENTS_NAMES_PATH';
 
 // ── Usage bars (plan rate limits) ───────────────────────────
 /** The last usage report per provider, in the persistence dir (shared by both surfaces). */

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import type { AgentNames } from '../../../core/src/agentNames.js';
+import { parseAgentNames } from '../../../core/src/agentNames.js';
 import type { Directory, HooksConsentRequest } from '../../../core/src/messages.js';
 import { handleCastMessage } from '../characters/castMessages.js';
 import { castStore } from '../characters/castStore.js';
@@ -141,6 +143,7 @@ interface ExtensionMessageState {
   consentRequest: HooksConsentRequest | null;
   dismissConsentRequest: (providerId: string | null) => void;
   // Areas
+  agentNames: AgentNames;
   areaMappings: Record<string, string[]>;
   setAreaMappings: (m: Record<string, string[]>) => void;
   showAreas: boolean;
@@ -222,6 +225,9 @@ export function useExtensionMessages(
   // than dropping it — the server sends one request per provider on the same handshake.
   const [consentQueue, setConsentQueue] = useState<HooksConsentRequest[]>([]);
   const consentRequest = consentQueue[0] ?? null;
+  // The user's own names for agents, by identity (core/agentNames). Owned by
+  // the server, so a rename in one office shows in every other.
+  const [agentNames, setAgentNames] = useState<AgentNames>({});
   const [areaMappings, setAreaMappings] = useState<Record<string, string[]>>({});
   const [showAreas, setShowAreas] = useState(false);
   const [bypassPermissions, setBypassPermissions] = useState(false);
@@ -776,6 +782,8 @@ export function useExtensionMessages(
         setCarpetSprites(sets);
       } else if (msg.type === 'cardOrderLoaded') {
         setCardOrder(msg.order);
+      } else if (msg.type === 'agentNamesLoaded') {
+        setAgentNames(parseAgentNames(msg.names));
       } else if (msg.type === 'areaMappingsLoaded') {
         const mappings = (msg.mappings ?? {}) as Record<string, string[]>;
         setAreaMappings(mappings);
@@ -980,6 +988,7 @@ export function useExtensionMessages(
         ),
       [],
     ),
+    agentNames,
     areaMappings,
     setAreaMappings,
     showAreas,

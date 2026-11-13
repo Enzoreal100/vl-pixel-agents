@@ -121,6 +121,7 @@ components:
         - $ref: '#/components/schemas/UsageBridgeStatus'
         - $ref: '#/components/schemas/UsageLimits'
         - $ref: '#/components/schemas/ExternalAssetDirectoriesUpdated'
+        - $ref: '#/components/schemas/AgentNamesLoaded'
         - $ref: '#/components/schemas/AreaMappingsLoaded'
         - $ref: '#/components/schemas/CardOrderLoaded'
         - $ref: '#/components/schemas/DirectoriesLoaded'
@@ -162,6 +163,7 @@ components:
         - $ref: '#/components/schemas/AddExternalAssetDirectory'
         - $ref: '#/components/schemas/RemoveExternalAssetDirectory'
         - $ref: '#/components/schemas/SaveAreaMappings'
+        - $ref: '#/components/schemas/SaveAgentName'
         - $ref: '#/components/schemas/SaveCardOrder'
         - $ref: '#/components/schemas/SetShowAreas'
         - $ref: '#/components/schemas/SetBypassPermissions'
@@ -895,6 +897,27 @@ components:
             Full disclosure body (what is written, what data moves, how to undo),
             paragraphs separated by blank lines.
 
+    AgentNamesLoaded:
+      description: |
+        The user's own names for agents, by identity: sent on `webviewReady`
+        and broadcast after every `saveAgentName`, so a rename shows in every
+        open office (desktop and phone). An identity is either a CLI agent
+        name (`dados-codigo`) or `dir:<Directory>` for an agent that has none
+        — stable across runs and machines, so a synced config carries the
+        names to another computer. Identities no agent wears are allowed: a
+        name outlives the agent that bore it.
+      type: object
+      additionalProperties: false
+      required: [type, names]
+      properties:
+        type:
+          const: agentNamesLoaded
+        names:
+          type: object
+          description: Map of agent identity (string) to the user's name for it.
+          additionalProperties:
+            type: string
+
     AreaMappingsLoaded:
       description: |
         Directory-to-Area mappings. Directory names map to one or more Area
@@ -1542,6 +1565,24 @@ components:
             type: array
             items:
               type: string
+
+    SaveAgentName:
+      description: >-
+        Name an agent, or clear its name. Keyed by identity, never by agent id
+        or session, so the name survives a restart and travels to another
+        machine. An empty or blank `name` REMOVES the entry and the agent goes
+        back to wearing its CLI label. Answered with an `agentNamesLoaded`
+        broadcast of the map as it now stands.
+      type: object
+      additionalProperties: false
+      required: [type, identity, name]
+      properties:
+        type:
+          const: saveAgentName
+        identity:
+          type: string
+        name:
+          type: string
 
     SaveCardOrder:
       description: Persist a reordered agent-card list (agent ids, first card first).

@@ -42,6 +42,7 @@ export type ServerMessage =
   | UsageBridgeStatus
   | UsageLimits
   | ExternalAssetDirectoriesUpdated
+  | AgentNamesLoaded
   | AreaMappingsLoaded
   | CardOrderLoaded
   | DirectoriesLoaded
@@ -79,6 +80,7 @@ export type ClientMessage =
   | AddExternalAssetDirectory
   | RemoveExternalAssetDirectory
   | SaveAreaMappings
+  | SaveAgentName
   | SaveCardOrder
   | SetShowAreas
   | SetBypassPermissions
@@ -424,6 +426,11 @@ export interface ExternalAssetDirectoriesUpdated {
   dirs: string[];
 }
 
+export interface AgentNamesLoaded {
+  type: 'agentNamesLoaded';
+  names: Record<string, string>;
+}
+
 export interface AreaMappingsLoaded {
   type: 'areaMappingsLoaded';
   mappings: Record<string, string[]>;
@@ -648,6 +655,12 @@ export interface RemoveExternalAssetDirectory {
 export interface SaveAreaMappings {
   type: 'saveAreaMappings';
   mappings: Record<string, string[]>;
+}
+
+export interface SaveAgentName {
+  type: 'saveAgentName';
+  identity: string;
+  name: string;
 }
 
 export interface SaveCardOrder {

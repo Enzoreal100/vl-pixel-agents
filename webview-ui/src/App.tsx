@@ -121,6 +121,7 @@ function App() {
     hooksInfoShown,
     consentRequest,
     dismissConsentRequest,
+    agentNames,
     areaMappings,
     setAreaMappings,
     showAreas,
@@ -375,6 +376,13 @@ function App() {
 
   const handleCloseAgent = useCallback((id: number) => {
     transport.send({ type: 'closeAgent', id });
+  }, []);
+
+  // The server owns the names (it persists them and broadcasts the map), so a
+  // rename is sent and the office waits for agentNamesLoaded rather than
+  // updating locally: every open office then shows it, this one included.
+  const handleSaveAgentName = useCallback((identity: string, name: string) => {
+    transport.send({ type: 'saveAgentName', identity, name });
   }, []);
 
   const { reveal: revealTerminal } = terminalDrawer;
@@ -671,6 +679,8 @@ function App() {
               panRef={editor.panRef}
               onCloseAgent={handleCloseAgent}
               alwaysShowOverlay={alwaysShowOverlay}
+              agentNames={agentNames}
+              onSaveAgentName={handleSaveAgentName}
             />
           </div>
         </>

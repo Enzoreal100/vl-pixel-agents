@@ -3,6 +3,7 @@ import { rosterPick } from '../../core/src/paletteUtils.js';
 import type { HookProvider } from '../../core/src/provider.js';
 import { resendAgentActivity } from './agentActivityResend.js';
 import { buildAgentDiagnostics } from './agentDiagnostics.js';
+import { agentNamesMessage, saveAgentName } from './agentNamesPersistence.js';
 import type { AgentRuntime } from './agentRuntime.js';
 import type { AgentStateStore } from './agentStateStore.js';
 import type { LoadedAssets, LoadedCharacterSprites, LoadedPetSprites } from './assetLoader.js';
@@ -426,6 +427,15 @@ export function handleClientMessage(
       break;
     }
 
+    case 'saveAgentName': {
+      // Every open office follows a rename, the sender's included: the name is
+      // the office's, not this client's.
+      // An identity is a non-empty string or there is nothing to name.
+      if (typeof msg.identity !== 'string' || !msg.identity.trim()) break;
+      store.broadcast({ type: 'agentNamesLoaded', names: saveAgentName(msg.identity, msg.name) });
+      break;
+    }
+
     case 'saveCardOrder': {
       const loaded = saveCardOrder(adapter, msg.order, (id) => store.has(id));
       // Every open office follows the reorder, the sender's included.
@@ -741,6 +751,8 @@ function handleWebviewReady(send: WsSend, ctx: ClientMessageContext): void {
       seatId: persisted?.seatId,
     };
   }
+  // Before the agents, so a named character is drawn named from its first frame.
+  send(agentNamesMessage());
   // Before the agents, so their cards appear in order rather than reshuffle.
   send(cardOrderMessage(adapter));
   send({
@@ -847,6 +859,10 @@ function refuseReadOnly(
         type: 'externalAssetDirectoriesUpdated',
         dirs: readConfig().externalAssetDirectories,
       });
+      return;
+    case 'saveAgentName':
+      // The label showed the new name already: put the stored one back.
+      send(agentNamesMessage());
       return;
     case 'saveCardOrder':
       // The bar showed the reorder already: put it back.
